@@ -1,4 +1,4 @@
-"""Fit the detector on unlabeled traffic, then evaluate against held-out labels."""
+"""Evaluate on held-out flows, never the records used to fit the detector."""
 from __future__ import annotations
 
 import sys
@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import numpy as np
 from sklearn.metrics import precision_recall_fscore_support, roc_auc_score
+from sklearn.model_selection import train_test_split
 
 from data import FEATURES, generate
 from detector import AnomalyDetector
@@ -15,14 +16,23 @@ from detector import AnomalyDetector
 
 def evaluate(n: int = 4000, contamination: float = 0.05, seed: int = 42):
     X, y = generate(n, contamination, seed)
-    det = AnomalyDetector(contamination=contamination, seed=seed).fit(X)  # unsupervised
-    preds = det.predict(X)
-    scores = det.anomaly_score(X)
-    p, r, f, _ = precision_recall_fscore_support(y, preds, average="binary", zero_division=0)
+    # Keep the evaluation partition completely out of model/scaler fitting.
+    # Labels are used for stratification and evaluation only, not for fitting.
+    X_train, X_test, _, y_test = train_test_split(
+        X, y, test_size=0.25, random_state=seed, stratify=y
+    )
+    det = AnomalyDetector(contamination=contamination, seed=seed).fit(X_train)
+    preds = det.predict(X_test)
+    scores = det.anomaly_score(X_test)
+    p, r, f, _ = precision_recall_fscore_support(
+        y_test, preds, average="binary", zero_division=0
+    )
     return {
-        "roc_auc": float(roc_auc_score(y, scores)),
+        "roc_auc": float(roc_auc_score(y_test, scores)),
         "precision": float(p), "recall": float(r), "f1": float(f),
         "n": n, "anomalies": int(y.sum()),
+        "train_flows": len(X_train), "test_flows": len(X_test),
+        "test_anomalies": int(y_test.sum()),
     }
 
 
