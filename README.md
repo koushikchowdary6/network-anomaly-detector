@@ -33,9 +33,11 @@ det.anomaly_score(X)                   # higher = more anomalous
 
 ## Results
 
-On the bundled synthetic dataset (4000 flows, 5% anomalies), the detector
-recovers the injected attacks with high ROC-AUC and F1 — while never seeing the
-labels during training.
+On the bundled synthetic dataset (4000 flows, 5% anomalies), evaluation now
+uses a stratified **75% train / 25% held-out test split**. The scaler and
+Isolation Forest are fit only on training flows; labels are used only for
+stratification and final scoring. This prevents the portfolio benchmark from
+quietly evaluating on records the detector already saw during fitting.
 
 ## Tests
 
@@ -43,8 +45,9 @@ labels during training.
 PYTHONPATH=src python -m pytest tests/ -v
 ```
 
-5 tests cover dataset generation, binary predictions, that anomalies score
-higher than normal traffic, and that an obvious DoS-shaped flow is flagged.
+6 tests cover dataset generation, binary predictions, anomaly score ordering,
+an obvious DoS-shaped flow, detection quality, and a regression check that the
+evaluation path preserves the 75/25 train/holdout split.
 
 ## ⚠️ Honesty about the data
 
