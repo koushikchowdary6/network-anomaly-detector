@@ -41,3 +41,11 @@ def test_obvious_dos_flow_flagged():
     # A synthetic DoS-like flow: huge packet counts, high pps.
     dos = np.array([[2.0, 8000.0, 300.0, 15000.0, 30.0, 7000.0]])
     assert det.predict(dos)[0] == 1
+
+
+def test_evaluation_keeps_holdout_out_of_training():
+    m = evaluate(n=400, contamination=0.05, seed=11)
+    assert m["train_flows"] == 300
+    assert m["test_flows"] == 100
+    assert m["train_flows"] + m["test_flows"] == m["n"]
+    assert 0 < m["test_anomalies"] < m["anomalies"]
