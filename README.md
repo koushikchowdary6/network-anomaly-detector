@@ -13,7 +13,12 @@ supervised model trained on old labels would miss.
 
 `duration`, `src_bytes`, `dst_bytes`, `src_pkts`, `dst_pkts`, `pkts_per_sec` —
 standard NetFlow fields. Heavy-tailed byte/packet counts are log-scaled and
-standardized before the model sees them (`src/detector.py`).
+standardized before the model sees them (`src/detector.py`). Input must be a
+nonempty 2D numeric array with exactly six columns in the listed order; all
+measurements must be finite and nonnegative. Invalid telemetry is rejected
+rather than silently converted (in particular, negative byte counts are **not**
+turned positive with an absolute-value transform). This validation runs for
+both fitting and inference.
 
 ## Quickstart
 
@@ -45,9 +50,9 @@ quietly evaluating on records the detector already saw during fitting.
 PYTHONPATH=src python -m pytest tests/ -v
 ```
 
-6 tests cover dataset generation, binary predictions, anomaly score ordering,
-an obvious DoS-shaped flow, detection quality, and a regression check that the
-evaluation path preserves the 75/25 train/holdout split.
+Tests cover dataset generation, binary predictions, anomaly score ordering,
+an obvious DoS-shaped flow, detection quality, held-out evaluation integrity,
+and malformed feature rejection during training and inference.
 
 ## ⚠️ Honesty about the data
 
