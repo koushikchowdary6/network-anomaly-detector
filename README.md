@@ -44,6 +44,12 @@ Isolation Forest are fit only on training flows; labels are used only for
 stratification and final scoring. This prevents the portfolio benchmark from
 quietly evaluating on records the detector already saw during fitting.
 
+Synthetic attack-like flows now compute packets-per-second from their packet
+counts and duration, rather than independently sampling an impossible rate.
+Generator inputs are validated; evaluation fails explicitly if too few
+examples exist for a two-class held-out benchmark. A failed model refit keeps
+the previous scaler and forest together, avoiding corrupted inference state.
+
 ## Tests
 
 ```bash
@@ -52,7 +58,8 @@ PYTHONPATH=src python -m pytest tests/ -v
 
 Tests cover dataset generation, binary predictions, anomaly score ordering,
 an obvious DoS-shaped flow, detection quality, held-out evaluation integrity,
-and malformed feature rejection during training and inference.
+malformed feature rejection, synthetic feature consistency, insufficient
+holdout classes, and atomic refit behavior.
 
 ## ⚠️ Honesty about the data
 
