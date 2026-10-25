@@ -11,12 +11,20 @@ licensed. Swap in a real CSV to run the same pipeline on genuine traffic.
 """
 from __future__ import annotations
 
+import math
+from numbers import Integral, Real
+
 import numpy as np
 
 FEATURES = ["duration", "src_bytes", "dst_bytes", "src_pkts", "dst_pkts", "pkts_per_sec"]
 
 
 def generate(n: int = 4000, contamination: float = 0.05, seed: int = 42):
+    if isinstance(n, bool) or not isinstance(n, Integral) or n < 1:
+        raise ValueError("n must be a positive integer")
+    if (isinstance(contamination, bool) or not isinstance(contamination, Real)
+            or not math.isfinite(contamination) or not 0 <= contamination <= 0.5):
+        raise ValueError("contamination must be finite and between 0 and 0.5")
     rng = np.random.default_rng(seed)
     n_anom = int(n * contamination)
     n_norm = n - n_anom
@@ -34,13 +42,16 @@ def generate(n: int = 4000, contamination: float = 0.05, seed: int = 42):
         kind = i % 3
         if kind == 0:  # port scan: tiny flows, many packets, high pps
             row = [rng.uniform(0.01, 0.1), rng.uniform(40, 120), rng.uniform(0, 40),
-                   rng.uniform(1, 3), 0, rng.uniform(500, 2000)]
+                   rng.uniform(30, 100), 0]
         elif kind == 1:  # exfiltration: huge src_bytes, long duration
             row = [rng.uniform(50, 300), rng.lognormal(13, 0.5), rng.uniform(100, 500),
-                   rng.uniform(500, 2000), rng.uniform(10, 50), rng.uniform(5, 50)]
+                   rng.uniform(500, 2000), rng.uniform(10, 50)]
         else:  # DoS flood: very high packets both ways, high pps
             row = [rng.uniform(1, 5), rng.lognormal(9, 0.5), rng.uniform(100, 400),
-                   rng.uniform(5000, 20000), rng.uniform(10, 40), rng.uniform(3000, 9000)]
+                   rng.uniform(5000, 20000), rng.uniform(10, 40)]
+        # Rate is derived from the same packets and duration as normal flows.
+        # Independent sampling would make impossible telemetry a shortcut for ML.
+        row.append(row[3] / max(row[0], 0.01))
         anoms.append(row)
     anoms = np.array(anoms) if anoms else np.empty((0, len(FEATURES)))
 
