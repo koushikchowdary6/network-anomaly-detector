@@ -16,6 +16,14 @@ from detector import AnomalyDetector
 
 def evaluate(n: int = 4000, contamination: float = 0.05, seed: int = 42):
     X, y = generate(n, contamination, seed)
+    # Stratified evaluation and ROC-AUC require both classes in the holdout.
+    # Surface insufficient synthetic data as an explicit contract error.
+    counts = np.bincount(y, minlength=2)
+    if min(counts) < 2 or int(np.ceil(len(y) * 0.25)) < 2:
+        raise ValueError(
+            "held-out evaluation requires at least two normal and two "
+            "anomalous flows and two test records"
+        )
     # Keep the evaluation partition completely out of model/scaler fitting.
     # Labels are used for stratification and evaluation only, not for fitting.
     X_train, X_test, _, y_test = train_test_split(
