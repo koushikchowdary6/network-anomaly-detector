@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import numpy as np
+from sklearn.base import clone
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 
@@ -38,9 +39,15 @@ class AnomalyDetector:
         return np.log1p(values)
 
     def fit(self, X: np.ndarray) -> "AnomalyDetector":
-        # Validate before changing fitted scaler/model state.
-        Xs = self.scaler.fit_transform(self._prepare_features(X))
-        self.model.fit(Xs)
+        # A failed refit must not pair an old forest with a newly fitted scaler.
+        # Train candidate components and publish them only after both succeed.
+        prepared = self._prepare_features(X)
+        candidate_scaler = StandardScaler()
+        Xs = candidate_scaler.fit_transform(prepared)
+        candidate_model = clone(self.model)
+        candidate_model.fit(Xs)
+        self.scaler = candidate_scaler
+        self.model = candidate_model
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
