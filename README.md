@@ -44,6 +44,15 @@ Isolation Forest are fit only on training flows; labels are used only for
 stratification and final scoring. This prevents the portfolio benchmark from
 quietly evaluating on records the detector already saw during fitting.
 
+The evaluation also reports **average precision (PR-AUC)** and the held-out
+positive-class prevalence (the random-ranking baseline), since ROC-AUC alone
+can obscure alert quality in imbalanced detection. It ranks held-out flows
+by anomaly score and reports **precision/recall among the top 5%** that an
+analyst could review, with the alert count rounded up. This fixed review
+budget is independent of the Isolation Forest's binary contamination
+threshold; labels never enter training or score ranking. The top-5% figures
+are synthetic benchmark measurements, not production SOC performance.
+
 Synthetic attack-like flows now compute packets-per-second from their packet
 counts and duration, rather than independently sampling an impossible rate.
 Generator inputs are validated; evaluation fails explicitly if too few
@@ -59,7 +68,8 @@ PYTHONPATH=src python -m pytest tests/ -v
 Tests cover dataset generation, binary predictions, anomaly score ordering,
 an obvious DoS-shaped flow, detection quality, held-out evaluation integrity,
 malformed feature rejection, synthetic feature consistency, insufficient
-holdout classes, and atomic refit behavior.
+holdout classes, atomic refit behavior, and top-score alert-budget ranking
+(including ties, rounding, and invalid metric inputs).
 
 ## ⚠️ Honesty about the data
 
