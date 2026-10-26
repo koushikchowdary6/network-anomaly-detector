@@ -52,6 +52,10 @@ analyst could review, with the alert count rounded up. This fixed review
 budget is independent of the Isolation Forest's binary contamination
 threshold; labels never enter training or score ranking. The top-5% figures
 are synthetic benchmark measurements, not production SOC performance.
+The alert-budget evaluator rejects nonbinary ground-truth labels and
+nonfinite, nonreal, or nonnumeric scores before ranking. This prevents
+malformed labels (such as a value of 2) from inflating hit counts into
+impossible precision/recall values above 100%.
 
 Synthetic attack-like flows now compute packets-per-second from their packet
 counts and duration, rather than independently sampling an impossible rate.

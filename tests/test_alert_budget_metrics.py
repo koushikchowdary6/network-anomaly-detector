@@ -48,3 +48,32 @@ def test_heldout_evaluation_reports_operational_ranking_metrics():
     assert result["test_prevalence"] == pytest.approx(
         result["test_anomalies"] / result["test_flows"]
     )
+
+
+@pytest.mark.parametrize("labels", [
+    np.array([0, 2, 1]),
+    np.array([0, -1, 1]),
+    np.array([0, 0.5, 1]),
+    np.array([0, np.nan, 1]),
+    np.array(["0", "1", "1"]),
+])
+def test_nonbinary_ground_truth_cannot_inflate_alert_metrics(labels):
+    with pytest.raises(ValueError, match="binary"):
+        _alert_budget_metrics(labels, np.array([0.1, 0.9, 0.8]), fraction=1)
+
+
+@pytest.mark.parametrize("scores", [
+    np.array([0.1, np.inf]),
+    np.array([0.1, complex(0.9, 1)]),
+    np.array(["low", "high"]),
+])
+def test_nonreal_or_nonnumeric_scores_are_rejected(scores):
+    with pytest.raises(ValueError, match="finite real-valued scores"):
+        _alert_budget_metrics(np.array([0, 1]), scores)
+
+
+def test_valid_binary_alert_budget_is_bounded():
+    labels = np.array([0, 1, 1, 0])
+    scores = np.array([0.1, 0.9, 0.8, 0.2])
+    precision, recall, count = _alert_budget_metrics(labels, scores, fraction=0.5)
+    assert (precision, recall, count) == (1.0, 1.0, 2)

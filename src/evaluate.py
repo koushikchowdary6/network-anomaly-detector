@@ -28,9 +28,17 @@ def _alert_budget_metrics(
         raise ValueError("alert budget fraction must be in (0, 1]")
     if y_true.ndim != 1 or scores.ndim != 1 or len(y_true) != len(scores) or not len(y_true):
         raise ValueError("alert budget inputs must be aligned non-empty vectors")
-    positives = int(np.sum(y_true))
-    if positives == 0 or not np.isfinite(scores).all():
-        raise ValueError("alert budget requires positives and finite scores")
+    # Counts and recall denominators are meaningful only for binary ground
+    # truth. A value like 2 previously inflated hits, yielding precision > 1.
+    if not np.isin(y_true, (0, 1)).all():
+        raise ValueError("alert budget labels must be binary 0/1")
+    if (not np.issubdtype(scores.dtype, np.number)
+            or np.issubdtype(scores.dtype, np.complexfloating)
+            or not np.isfinite(scores).all()):
+        raise ValueError("alert budget requires finite real-valued scores")
+    positives = int(np.count_nonzero(y_true == 1))
+    if positives == 0:
+        raise ValueError("alert budget requires at least one positive")
     budget = max(1, math.ceil(len(y_true) * fraction))
     # Stable sorting makes tied-score handling reproducible across runs.
     top_indices = np.argsort(-scores, kind="stable")[:budget]
