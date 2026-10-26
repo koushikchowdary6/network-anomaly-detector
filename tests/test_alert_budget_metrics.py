@@ -40,7 +40,7 @@ def test_mismatched_vectors_and_nonfinite_scores_fail_explicitly():
 
 def test_heldout_evaluation_reports_operational_ranking_metrics():
     result = evaluate(n=2000, contamination=0.05, seed=3)
-    assert 0 <= result["average_precision"] <= 1
+    assert 0 <= result["average_precision"] <= 1 + 1e-12  # floating-point PR-AUC roundoff
     assert result["average_precision"] > result["test_prevalence"]
     assert result["alerts_at_5pct_budget"] == 25
     assert 0 <= result["precision_at_5pct_budget"] <= 1
