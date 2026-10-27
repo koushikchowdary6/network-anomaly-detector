@@ -18,11 +18,38 @@ def test_alert_budget_uses_highest_scores_not_classifier_labels():
     assert (precision, recall, count) == (1.0, 1.0, 2)
 
 
-def test_alert_budget_rounds_up_and_handles_stable_ties():
+def test_alert_budget_rounds_up_and_shares_boundary_ties():
     labels = np.array([0, 1, 1])
     scores = np.array([0.9, 0.9, 0.1])
-    assert _alert_budget_metrics(labels, scores) == (0.0, 0.0, 1)
+    # One of two equally ranked candidates is positive. With one review
+    # slot, expected precision is 1/2 and expected recall is 1/4.
+    assert _alert_budget_metrics(labels, scores) == (0.5, 0.25, 1)
     assert _alert_budget_metrics(labels, scores, fraction=2 / 3) == (0.5, 0.5, 2)
+
+
+def test_alert_budget_boundary_ties_are_invariant_to_holdout_row_order():
+    labels = np.array([1, 0, 1, 0, 1])
+    scores = np.array([0.95, 0.8, 0.8, 0.8, 0.1])
+    # Two review slots: one guaranteed positive above the boundary and
+    # one randomly selected from three tied rows with one positive.
+    expected = (2 / 3, 4 / 9, 2)
+    for permutation in (
+        np.array([0, 1, 2, 3, 4]),
+        np.array([3, 2, 4, 0, 1]),
+        np.array([4, 1, 0, 3, 2]),
+    ):
+        precision, recall, budget = _alert_budget_metrics(
+            labels[permutation], scores[permutation], fraction=0.4
+        )
+        assert precision == pytest.approx(expected[0])
+        assert recall == pytest.approx(expected[1])
+        assert budget == expected[2]
+
+
+def test_alert_budget_without_boundary_ties_keeps_exact_hit_counts():
+    labels = np.array([1, 0, 1, 0])
+    scores = np.array([0.9, 0.8, 0.7, 0.1])
+    assert _alert_budget_metrics(labels, scores, fraction=0.5) == (0.5, 0.5, 2)
 
 
 @pytest.mark.parametrize("fraction", [0, -0.1, 1.01, float("nan"), float("inf")])

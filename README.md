@@ -50,8 +50,12 @@ can obscure alert quality in imbalanced detection. It ranks held-out flows
 by anomaly score and reports **precision/recall among the top 5%** that an
 analyst could review, with the alert count rounded up. This fixed review
 budget is independent of the Isolation Forest's binary contamination
-threshold; labels never enter training or score ranking. The top-5% figures
-are synthetic benchmark measurements, not production SOC performance.
+threshold; labels never enter training or score ranking. When the alert-budget
+cutoff falls within a tied-score group, precision and recall use expected
+fractional credit under a uniform random tie-break rather than arbitrarily
+favoring earlier holdout rows. The alert count remains an integer, while the
+reported hit count is an expectation, not an observed deployment outcome.
+The top-5% figures are synthetic benchmark measurements, not production SOC performance.
 The alert-budget evaluator rejects nonbinary ground-truth labels and
 nonfinite, nonreal, or nonnumeric scores before ranking. This prevents
 malformed labels (such as a value of 2) from inflating hit counts into
