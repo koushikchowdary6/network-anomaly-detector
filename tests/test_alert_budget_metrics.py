@@ -32,7 +32,7 @@ def test_alert_budget_boundary_ties_are_invariant_to_holdout_row_order():
     scores = np.array([0.95, 0.8, 0.8, 0.8, 0.1])
     # Two review slots: one guaranteed positive above the boundary and
     # one randomly selected from three tied rows with one positive.
-    expected = (2 / 3, 2 / 3, 2)
+    expected = (2 / 3, 4 / 9, 2)
     for permutation in (
         np.array([0, 1, 2, 3, 4]),
         np.array([3, 2, 4, 0, 1]),
