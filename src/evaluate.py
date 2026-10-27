@@ -40,10 +40,18 @@ def _alert_budget_metrics(
     if positives == 0:
         raise ValueError("alert budget requires at least one positive")
     budget = max(1, math.ceil(len(y_true) * fraction))
-    # Stable sorting makes tied-score handling reproducible across runs.
-    top_indices = np.argsort(-scores, kind="stable")[:budget]
-    hits = int(np.sum(y_true[top_indices]))
-    return hits / budget, hits / positives, budget
+    # At the cutoff, equally scored flows are indistinguishable to the model.
+    # Stable sorting arbitrarily favors whichever tied row appeared first,
+    # so a shuffled holdout can change reported precision/recall. Credit
+    # boundary ties by their expected positive share instead; this is the
+    # expected metric under a uniform random tie-break, not an observed
+    # integer number of alerts correctly classified.
+    cutoff = np.partition(scores, len(scores) - budget)[len(scores) - budget]
+    above = scores > cutoff
+    tied = scores == cutoff
+    remaining = budget - int(np.count_nonzero(above))
+    expected_hits = float(np.sum(y_true[above])) + remaining * float(np.mean(y_true[tied]))
+    return expected_hits / budget, expected_hits / positives, budget
 
 
 def evaluate(n: int = 4000, contamination: float = 0.05, seed: int = 42):
