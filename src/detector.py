@@ -40,7 +40,7 @@ class AnomalyDetector:
             or not isinstance(value, (Real, np.integer, np.floating))
             for value in raw.flat
         ):
-            raise ValueError("flow features must contain real numbers, not booleans or strings")
+            raise ValueError("flow features must contain numeric real numbers, not booleans or strings")
         try:
             values = np.asarray(raw, dtype=np.float64)
         except (TypeError, ValueError, OverflowError) as exc:
