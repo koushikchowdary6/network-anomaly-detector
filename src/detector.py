@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import numpy as np
+from numbers import Real
 from sklearn.base import clone
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
@@ -25,13 +26,25 @@ class AnomalyDetector:
         records instead of training or scoring on corrupted telemetry.
         """
         try:
-            values = np.asarray(X, dtype=np.float64)
+            # Preserve original scalar types before conversion. Casting first
+            # silently accepts booleans and numeric strings as real telemetry.
+            raw = np.asarray(X, dtype=object)
         except (TypeError, ValueError) as exc:
             raise ValueError("flow features must be numeric") from exc
-        if values.ndim != 2 or values.shape[1] != len(FEATURES):
+        if raw.ndim != 2 or raw.shape[1] != len(FEATURES):
             raise ValueError(f"flow features must have shape (n, {len(FEATURES)})")
-        if not values.shape[0]:
+        if not raw.shape[0]:
             raise ValueError("flow features must contain at least one record")
+        if any(
+            isinstance(value, (bool, np.bool_))
+            or not isinstance(value, (Real, np.integer, np.floating))
+            for value in raw.flat
+        ):
+            raise ValueError("flow features must contain real numbers, not booleans or strings")
+        try:
+            values = np.asarray(raw, dtype=np.float64)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError("flow features must be numeric") from exc
         if not np.isfinite(values).all():
             raise ValueError("flow features must be finite")
         if (values < 0).any():
