@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+from numbers import Real
 import sys
 from pathlib import Path
 
@@ -24,8 +25,15 @@ def _alert_budget_metrics(
     This evaluates score ranking, independently of the model's binary
     contamination threshold. Labels are used only after scoring.
     """
-    if not math.isfinite(fraction) or not 0 < fraction <= 1:
-        raise ValueError("alert budget fraction must be in (0, 1]")
+    # bool is an int in Python, and math.isfinite(True) is True.
+    # Neither booleans nor numeric strings represent a review-budget ratio.
+    if (
+        isinstance(fraction, (bool, np.bool_))
+        or not isinstance(fraction, (Real, np.integer, np.floating))
+        or not math.isfinite(fraction)
+        or not 0 < fraction <= 1
+    ):
+        raise ValueError("alert budget fraction must be a real number in (0, 1]")
     if y_true.ndim != 1 or scores.ndim != 1 or len(y_true) != len(scores) or not len(y_true):
         raise ValueError("alert budget inputs must be aligned non-empty vectors")
     # Counts and recall denominators are meaningful only for binary ground
