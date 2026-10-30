@@ -1,3 +1,7 @@
+> **Standalone repository:** [edgewatch-iot](https://github.com/koushikchowdary6/edgewatch-iot). The independent migration passed clean-checkout tests and [GitHub Actions](https://github.com/koushikchowdary6/edgewatch-iot/actions/runs/41059691758).
+>
+> This original implementation is retained for history and compatibility. Removal requires separate owner approval. New development belongs in the standalone repository.
+
 # EdgeWatch — IoT telemetry and replay monitor
 
 A runnable software-only device-monitoring project: a synthetic ESP32-like
