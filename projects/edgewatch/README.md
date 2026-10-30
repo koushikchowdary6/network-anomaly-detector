@@ -37,8 +37,22 @@ low-voltage alert. Restart the receiver to verify readings persist.
 The producer removes acknowledged lines by replacing its outbox. If it crashes
 after server acceptance but before replacement, replay is safe because the
 server's `(device, seq)` key is unique. Use one producer per outbox. Sequence
-numbers must persist across device restarts in a real adapter. A permanent 400
-record blocks later outbox records until an operator repairs/quarantines it.
+numbers must persist across device restarts in a real adapter. By default, a permanent HTTP 400/413 rejection stops replay and preserves
+that record and everything after it. To explicitly quarantine permanently
+rejected records and continue with later valid readings, use:
+
+```bash
+python replay.py --outbox offline.jsonl --quarantine rejected.jsonl
+```
+
+The quarantine JSONL records the original telemetry line and HTTP status.
+Treat it as sensitive operational data; do not commit it. Newly created
+quarantine files use owner-only permissions on POSIX. A failed quarantine
+write leaves the outbox intact, and 401/403 authentication, 409 concurrency,
+429 rate-limit, and 5xx errors always stop replay without quarantine.
+Quarantine is not exactly-once: a crash after appending to quarantine but
+before rewriting the outbox may produce a duplicate quarantine entry.
+Review and repair rejected records before reintroducing them to the outbox.
 
 ## Architecture and constraints
 
@@ -61,8 +75,8 @@ recommendations. No physical actuator control is performed.
 python -m unittest discover -s projects/edgewatch -v
 ```
 
-Run this from the repository root. Six tests cover replay, conflicts, alerts,
-invalid inputs, restart persistence and real HTTP/outbox authentication behavior.
+Run this from the repository root. Ten tests cover replay, conflicts, alerts, invalid inputs, restart persistence,
+real HTTP/outbox authentication, quarantine, and failure preservation.
 
 ## Interview walkthrough
 
