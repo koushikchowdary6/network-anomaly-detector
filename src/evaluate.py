@@ -38,8 +38,13 @@ def _alert_budget_metrics(
         raise ValueError("alert budget inputs must be aligned non-empty vectors")
     # Counts and recall denominators are meaningful only for binary ground
     # truth. A value like 2 previously inflated hits, yielding precision > 1.
-    if not np.isin(y_true, (0, 1)).all():
-        raise ValueError("alert budget labels must be binary 0/1")
+    # np.isin treats True as 1 and 1.0 as an integer label. Reject these
+    # coerced values before computing alert precision/recall: evaluation
+    # ground truth must be an explicit integer class annotation.
+    if (np.issubdtype(y_true.dtype, np.bool_)
+            or not np.issubdtype(y_true.dtype, np.integer)
+            or not np.isin(y_true, (0, 1)).all()):
+        raise ValueError("alert budget labels must be binary integer 0/1")
     if (not np.issubdtype(scores.dtype, np.number)
             or np.issubdtype(scores.dtype, np.complexfloating)
             or not np.isfinite(scores).all()):
