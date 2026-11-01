@@ -55,6 +55,11 @@ cutoff falls within a tied-score group, precision and recall use expected
 fractional credit under a uniform random tie-break rather than arbitrarily
 favoring earlier holdout rows. The alert count remains an integer, while the
 reported hit count is an expectation, not an observed deployment outcome.
+The evaluator additionally reports exact **minimum/maximum precision and recall**
+for all possible assignments of the tied cutoff records to the remaining
+review slots. These are deterministic tie-assignment bounds, **not confidence
+intervals** and not evidence of performance on live traffic. Without score
+ties, the bounds collapse to the ordinary observed top-budget metrics.
 The top-5% figures are synthetic benchmark measurements, not production SOC performance.
 The alert-budget evaluator rejects nonbinary ground-truth labels and
 nonfinite, nonreal, or nonnumeric scores before ranking. This prevents
