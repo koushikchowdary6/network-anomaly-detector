@@ -66,8 +66,12 @@ nonfinite, nonreal, or nonnumeric scores before ranking. This prevents
 malformed labels (such as a value of 2) from inflating hit counts into
 impossible precision/recall values above 100%.
 
-Synthetic attack-like flows now compute packets-per-second from their packet
-counts and duration, rather than independently sampling an impossible rate.
+Both normal and injected synthetic flows now round byte/packet counters to
+nonnegative whole numbers (with at least one source packet per flow) and
+recompute packets-per-second from those final counts and duration. Earlier
+synthetic flows contained fractional packet and byte counts; that was a
+telemetry-realism defect, not evidence of better detection. Existing benchmark
+scores must be rerun on the corrected generator before quoting exact values.
 Generator inputs are validated; evaluation fails explicitly if too few
 examples exist for a two-class held-out benchmark. A failed model refit keeps
 the previous scaler and forest together, avoiding corrupted inference state.
