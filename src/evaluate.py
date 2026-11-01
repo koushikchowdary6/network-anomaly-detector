@@ -67,6 +67,33 @@ def _alert_budget_metrics(
     return expected_hits / budget, expected_hits / positives, budget
 
 
+
+def _alert_budget_tie_bounds(
+    y_true: np.ndarray, scores: np.ndarray, fraction: float = 0.05
+) -> tuple[float, float, float, float]:
+    """Exact worst/best precision and recall for a score-tied review cutoff.
+
+    These are tie-assignment bounds, not statistical confidence intervals.
+    The existing expected metrics assume a uniform random tie-break.
+    """
+    # Reuse the full label/score/budget validation contract before indexing.
+    _, _, budget = _alert_budget_metrics(y_true, scores, fraction)
+    cutoff = np.partition(scores, len(scores) - budget)[len(scores) - budget]
+    above = scores > cutoff
+    tied = scores == cutoff
+    remaining = budget - int(np.count_nonzero(above))
+    certain_hits = int(np.count_nonzero(y_true[above] == 1))
+    tied_positives = int(np.count_nonzero(y_true[tied] == 1))
+    tied_negatives = int(np.count_nonzero(tied)) - tied_positives
+    min_hits = certain_hits + max(0, remaining - tied_negatives)
+    max_hits = certain_hits + min(remaining, tied_positives)
+    positives = int(np.count_nonzero(y_true == 1))
+    return (
+        min_hits / budget, max_hits / budget,
+        min_hits / positives, max_hits / positives,
+    )
+
+
 def evaluate(n: int = 4000, contamination: float = 0.05, seed: int = 42):
     X, y = generate(n, contamination, seed)
     # Stratified evaluation and ROC-AUC require both classes in the holdout.
@@ -89,12 +116,17 @@ def evaluate(n: int = 4000, contamination: float = 0.05, seed: int = 42):
         y_test, preds, average="binary", zero_division=0
     )
     budget_precision, budget_recall, budget_count = _alert_budget_metrics(y_test, scores)
+    budget_p_min, budget_p_max, budget_r_min, budget_r_max = _alert_budget_tie_bounds(y_test, scores)
     return {
         "roc_auc": float(roc_auc_score(y_test, scores)),
         "average_precision": float(average_precision_score(y_test, scores)),
         "test_prevalence": float(np.mean(y_test)),
         "precision_at_5pct_budget": budget_precision,
         "recall_at_5pct_budget": budget_recall,
+        "precision_at_5pct_budget_lower_bound": budget_p_min,
+        "precision_at_5pct_budget_upper_bound": budget_p_max,
+        "recall_at_5pct_budget_lower_bound": budget_r_min,
+        "recall_at_5pct_budget_upper_bound": budget_r_max,
         "alerts_at_5pct_budget": budget_count,
         "precision": float(p), "recall": float(r), "f1": float(f),
         "n": n, "anomalies": int(y.sum()),
@@ -111,6 +143,8 @@ if __name__ == "__main__":
     print(f"  test prevalence: {m['test_prevalence']:.3f}")
     print(f"  precision @ 5% alert budget: {m['precision_at_5pct_budget']:.3f}")
     print(f"  recall @ 5% alert budget: {m['recall_at_5pct_budget']:.3f}")
+    print(f"  tie-assignment precision bounds: [{m['precision_at_5pct_budget_lower_bound']:.3f}, {m['precision_at_5pct_budget_upper_bound']:.3f}]")
+    print(f"  tie-assignment recall bounds: [{m['recall_at_5pct_budget_lower_bound']:.3f}, {m['recall_at_5pct_budget_upper_bound']:.3f}]")
     print(f"  precision: {m['precision']:.3f}")
     print(f"  recall   : {m['recall']:.3f}")
     print(f"  f1       : {m['f1']:.3f}")
