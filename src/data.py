@@ -56,6 +56,14 @@ def generate(n: int = 4000, contamination: float = 0.05, seed: int = 42):
     anoms = np.array(anoms) if anoms else np.empty((0, len(FEATURES)))
 
     X = np.vstack([normal, anoms])
+    # NetFlow byte and packet counters are discrete observations, not
+    # fractional measurements. Quantize both normal and injected flows using
+    # the same rule, then recompute the derived rate from the final counts.
+    # This avoids training on physically impossible fractional packets and
+    # prevents the rate feature from contradicting the counter features.
+    X[:, 1:5] = np.rint(X[:, 1:5])
+    X[:, 3] = np.maximum(X[:, 3], 1)  # a recorded source flow has packets
+    X[:, 5] = X[:, 3] / np.maximum(X[:, 0], 0.01)
     y = np.concatenate([np.zeros(n_norm), np.ones(n_anom)])  # 1 = anomaly
     perm = rng.permutation(len(X))
     return X[perm], y[perm].astype(int)
